@@ -1,27 +1,33 @@
-import React, { Component } from 'react';
+import React from 'react';
 import {
     Platform,
     TouchableOpacity,
     TouchableNativeFeedback,
     View,
-    Text
 } from 'react-native';
 
-function _handlePress(callback){
-    requestAnimationFrame(callback)
+function _handlePress(callback) {
+    if (callback) {
+        requestAnimationFrame(callback);
+    }
 }
 
+const Button = ({ children, disabled = false, onPress = () => {}, style }) => {
+    const handlePress = () => _handlePress(onPress);
 
-const Button = (props) => {
-    return (
-        Platform.OS === 'ios'
-        ? <TouchableOpacity disabled={props.disabled} style={props.style} onPress={() => _handlePress(props.onPress)}>{props.children}</TouchableOpacity> 
-        : <TouchableNativeFeedback  disabled={props.disabled} onPress={() => _handlePress(props.onPress)}><View style={props.style}>{props.children}</View></TouchableNativeFeedback>
-    )
-}
-
-Button.defaultProps = {
-    onPress : () => {}
-}
+    if (Platform.OS === 'ios') {
+        return (
+            <TouchableOpacity disabled={disabled} style={style} onPress={handlePress}>
+                {children}
+            </TouchableOpacity>
+        );
+    } else {
+        return (
+            <TouchableNativeFeedback disabled={disabled} onPress={handlePress}>
+                <View style={style}>{children}</View>
+            </TouchableNativeFeedback>
+        );
+    }
+};
 
 export default Button;
