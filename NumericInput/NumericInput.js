@@ -18,6 +18,7 @@ const NumericInput = ({
     rounded = false,
     textColor = 'black',
     containerStyle = {},
+    inputStyle = {},
     initValue = 0,
     value = null,
     minValue = null,
@@ -35,8 +36,8 @@ const NumericInput = ({
     onLimitReached = (isMax, msg) => { },
     onBlur,
     onFocus,
+    onChange,
     extraTextInputProps = {},
-    ...props
 }) => {
     const [internalValue, setInternalValue] = useState(initValue !== 0 || initValue ? initValue : value || 0)
     const [stringValue, setStringValue] = useState((initValue !== 0 || initValue ? initValue : value || 0).toString())
@@ -86,15 +87,27 @@ const NumericInput = ({
     }
 
     const isLegalValue = (value, mReal, mInt) => {
-        return value === '' || (((valueType === 'real' && mReal(value)) || (valueType !== 'real' && mInt(value))) &&
-            (maxValue === null || parseFloat(value) <= maxValue) &&
-            (minValue === null || parseFloat(value) >= minValue))
+        if (value === '') return true;
+        const numericValue = valueType === 'real' ? parseFloat(value) : parseInt(value);
+        if (isNaN(numericValue)) return false;
+        if (maxValue !== null && numericValue > maxValue) return false;
+        if (minValue !== null && numericValue < minValue) return false;
+        return valueType === 'real' ? mReal(value) : mInt(value);
     }
 
-    const realMatch = (value) => value && value.match(/-?\d+(\.(\d+)?)?/) && value.match(/-?\d+(\.(\d+)?)?/)[0] === value.match(/-?\d+(\.(\d+)?)?/).input
-    const intMatch = (value) => value && value.match(/-?\d+/) && value.match(/-?\d+/)[0] === value.match(/-?\d+/).input
+    const realMatch = (value) => {
+        if (typeof value !== 'string') return false;
+        const match = value.match(/^-?\d*\.?\d*$/);
+        return match && match[0] === value;
+    }
 
-    const onChange = (value) => {
+    const intMatch = (value) => {
+        if (typeof value !== 'string') return false;
+        const match = value.match(/^-?\d*$/);
+        return match && match[0] === value;
+    }
+
+    const onChangeText = (value) => {
         let legal = isLegalValue(value, realMatch, intMatch)
         if (legal) {
             setLastValid(value)
@@ -109,20 +122,23 @@ const NumericInput = ({
     }
 
     const onBlurCustom = () => {
-        let match = stringValue.match(/-?[0-9]\d*(\.\d+)?/)
-        let legal = match && match[0] === match.input &&
-            (maxValue === null || parseFloat(stringValue) <= maxValue) &&
-            (minValue === null || parseFloat(stringValue) >= minValue)
+        let legal = isLegalValue(stringValue, realMatch, intMatch);
         if (!legal) {
-            if (minValue !== null && parseFloat(stringValue) <= minValue) {
+            if (minValue !== null && parseFloat(stringValue) < minValue) {
                 onLimitReached(false, 'Reached Minimum Value!')
-            }
-            if (maxValue !== null && parseFloat(stringValue) >= maxValue) {
+                setStringValue(minValue.toString())
+                setInternalValue(minValue)
+                onChange && onChange(minValue)
+            } else if (maxValue !== null && parseFloat(stringValue) > maxValue) {
                 onLimitReached(true, 'Reached Maximum Value!')
+                setStringValue(maxValue.toString())
+                setInternalValue(maxValue)
+                onChange && onChange(maxValue)
+            } else {
+                setStringValue(lastValid.toString())
+                setInternalValue(lastValid)
+                onChange && onChange(lastValid)
             }
-            setStringValue(lastValid.toString())
-            setInternalValue(lastValid)
-            onChange && onChange(lastValid)
         }
         onBlur && onBlur()
     }
@@ -143,9 +159,9 @@ const NumericInput = ({
         ? [styles.inputContainerUpDown, { width: totalWidth, height: totalHeight, borderColor: borderColor }, rounded ? { borderRadius: borderRadiusTotal } : {}, containerStyle]
         : [styles.inputContainerPlusMinus, { width: totalWidth, height: totalHeight, borderColor: borderColor }, rounded ? { borderRadius: borderRadiusTotal } : {}, containerStyle]
 
-    const inputStyle = type === 'up-down'
-        ? [styles.inputUpDown, { width: inputWidth, height: totalHeight, fontSize: fontSize, color: textColor, borderRightWidth: 2, borderRightColor: borderColor }, props.inputStyle]
-        : [styles.inputPlusMinus, { width: inputWidth, height: totalHeight, fontSize: fontSize, color: textColor, borderRightWidth: separatorWidth, borderLeftWidth: separatorWidth, borderLeftColor: borderColor, borderRightColor: borderColor }, props.inputStyle]
+    const calculatedInputStyle = type === 'up-down'
+        ? [styles.inputUpDown, { width: inputWidth, height: totalHeight, fontSize: fontSize, color: textColor, borderRightWidth: 2, borderRightColor: borderColor }, inputStyle]
+        : [styles.inputPlusMinus, { width: inputWidth, height: totalHeight, fontSize: fontSize, color: textColor, borderRightWidth: separatorWidth, borderLeftWidth: separatorWidth, borderLeftColor: borderColor, borderRightColor: borderColor }, inputStyle]
 
     const upDownStyle = [{ alignItems: 'center', width: totalWidth - inputWidth, backgroundColor: upDownButtonsBackgroundColor, borderRightWidth: 1, borderRightColor: borderColor }, rounded ? { borderTopRightRadius: borderRadiusTotal, borderBottomRightRadius: borderRadiusTotal } : {}]
 
@@ -191,8 +207,8 @@ const NumericInput = ({
                     underlineColorAndroid='rgba(0,0,0,0)'
                     keyboardType='numeric'
                     value={stringValue}
-                    onChangeText={onChange}
-                    style={inputStyle}
+                    onChangeText={onChangeText}
+                    style={calculatedInputStyle}
                     ref={inputRef}
                     onBlur={onBlurCustom}
                     onFocus={onFocusCustom}
@@ -221,8 +237,8 @@ const NumericInput = ({
                         underlineColorAndroid='rgba(0,0,0,0)'
                         keyboardType='numeric'
                         value={stringValue}
-                        onChangeText={onChange}
-                        style={inputStyle}
+                        onChangeText={onChangeText}
+                        style={calculatedInputStyle}
                         ref={inputRef}
                         onBlur={onBlurCustom}
                         onFocus={onFocusCustom}
