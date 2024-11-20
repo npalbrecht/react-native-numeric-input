@@ -1,291 +1,226 @@
-import React, { useState, useRef, useEffect } from 'react'
-import { View, TextInput, StyleSheet } from 'react-native'
-import Icon from 'react-native-vector-icons/Ionicons'
-import Button from '../Button/Button'
-import { create, PREDEF_RES } from 'react-native-pixel-perfect'
-
-let calcSize = create(PREDEF_RES.iphone7.px)
+import React, { useEffect, useState } from 'react';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 const NumericInput = ({
-    iconSize = calcSize(30),
-    borderColor = '#d4d4d4',
-    iconStyle = {},
-    totalWidth = calcSize(220),
-    totalHeight,
-    separatorWidth = 1,
-    type = 'plus-minus',
-    valueType = 'integer',
-    rounded = false,
-    textColor = 'black',
-    containerStyle = {},
-    inputStyle = {},
-    initValue = 0,
-    value = null,
-    minValue = null,
-    maxValue = null,
-    step = 1,
-    upDownButtonsBackgroundColor = 'white',
-    rightButtonBackgroundColor = 'white',
-    leftButtonBackgroundColor = 'white',
-    editable = true,
-    validateOnBlur = true,
-    reachMaxIncIconStyle = {},
-    reachMaxDecIconStyle = {},
-    reachMinIncIconStyle = {},
-    reachMinDecIconStyle = {},
-    onLimitReached = (isMax, msg) => { },
-    onBlur,
-    onFocus,
-    onChange,
-    extraTextInputProps = {},
+  borderColor = '#E5E7E9',
+  containerStyle = {},
+  editable = true,
+  initValue = 0,
+  inputStyle = {},
+  maxValue = null,
+  minValue = null,
+  onChange,
+  onLimitReached = () => {},
+  rounded = false,
+  step = 1,
+  textColor = '#000',
+  totalHeight = 50,
+  totalWidth = 150,
+  type = 'plus-minus',
+  value = null,
 }) => {
-    const [internalValue, setInternalValue] = useState(initValue !== 0 || initValue ? initValue : value || 0)
-    const [stringValue, setStringValue] = useState((initValue !== 0 || initValue ? initValue : value || 0).toString())
-    const [lastValid, setLastValid] = useState(initValue !== 0 || initValue ? initValue : value || 0)
-    const inputRef = useRef(null)
+  const [internalValue, setInternalValue] = useState(
+    initValue !== 0 || initValue ? initValue : value || 0
+  );
+  const [stringValue, setStringValue] = useState(
+    (initValue !== 0 || initValue ? initValue : value || 0).toString()
+  );
 
-    useEffect(() => {
-        if (value !== null && value !== internalValue) {
-            setInternalValue(value)
-            setLastValid(value)
-            setStringValue(value.toString())
-        }
-    }, [value])
-
-    const updateBaseResolution = (width, height) => {
-        calcSize = create({ width, height })
+  useEffect(() => {
+    if (value !== null && value !== internalValue) {
+      setInternalValue(value);
+      setStringValue(value.toString());
     }
+  }, [value]);
 
-    const inc = () => {
-        let newValue = (internalValue + step).toFixed(12)
-        newValue = valueType === 'real' ? parseFloat(newValue) : parseInt(newValue)
-        if (maxValue === null || newValue <= maxValue) {
-            setInternalValue(newValue)
-            setStringValue(newValue.toString())
-            onChange && onChange(newValue)
-        } else {
-            onLimitReached(true, 'Reached Maximum Value!')
-            setInternalValue(maxValue)
-            setStringValue(maxValue.toString())
-            onChange && onChange(maxValue)
-        }
-    }
+  const buttonWidth = totalWidth * 0.3;
+  const inputWidth = totalWidth * 0.4;
+  const borderRadius = rounded ? 10 : 0;
 
-    const dec = () => {
-        let newValue = (internalValue - step).toFixed(12)
-        newValue = valueType === 'real' ? parseFloat(newValue) : parseInt(newValue)
-        if (minValue === null || newValue >= minValue) {
-            setInternalValue(newValue)
-            setStringValue(newValue.toString())
-            onChange && onChange(newValue)
-        } else {
-            onLimitReached(false, 'Reached Minimum Value!')
-            setInternalValue(minValue)
-            setStringValue(minValue.toString())
-            onChange && onChange(minValue)
-        }
-    }
-
-    const isLegalValue = (value, mReal, mInt) => {
-        if (value === '') return true;
-        const numericValue = valueType === 'real' ? parseFloat(value) : parseInt(value);
-        if (isNaN(numericValue)) return false;
-        if (maxValue !== null && numericValue > maxValue) return false;
-        if (minValue !== null && numericValue < minValue) return false;
-        return valueType === 'real' ? mReal(value) : mInt(value);
-    }
-
-    const realMatch = (value) => {
-        if (typeof value !== 'string') return false;
-        const match = value.match(/^-?\d*\.?\d*$/);
-        return match && match[0] === value;
-    }
-
-    const intMatch = (value) => {
-        if (typeof value !== 'string') return false;
-        const match = value.match(/^-?\d*$/);
-        return match && match[0] === value;
-    }
-
-    const onChangeText = (value) => {
-        let legal = isLegalValue(value, realMatch, intMatch)
-        if (legal) {
-            setLastValid(value)
-        }
-        if (legal || validateOnBlur) {
-            setStringValue(value)
-            let parsedValue = valueType === 'real' ? parseFloat(value) : parseInt(value)
-            parsedValue = isNaN(parsedValue) ? 0 : parsedValue
-            setInternalValue(parsedValue)
-            onChange && onChange(parsedValue)
-        }
-    }
-
-    const onBlurCustom = () => {
-        let legal = isLegalValue(stringValue, realMatch, intMatch);
-        if (!legal) {
-            if (minValue !== null && parseFloat(stringValue) < minValue) {
-                onLimitReached(false, 'Reached Minimum Value!')
-                setStringValue(minValue.toString())
-                setInternalValue(minValue)
-                onChange && onChange(minValue)
-            } else if (maxValue !== null && parseFloat(stringValue) > maxValue) {
-                onLimitReached(true, 'Reached Maximum Value!')
-                setStringValue(maxValue.toString())
-                setInternalValue(maxValue)
-                onChange && onChange(maxValue)
-            } else {
-                setStringValue(lastValid.toString())
-                setInternalValue(lastValid)
-                onChange && onChange(lastValid)
-            }
-        }
-        onBlur && onBlur()
-    }
-
-    const onFocusCustom = () => {
-        setLastValid(internalValue)
-        onFocus && onFocus()
-    }
-
-    totalHeight = totalHeight || totalWidth * 0.4
-    const inputWidth = type === 'up-down' ? totalWidth * 0.6 : totalWidth * 0.4
-    const borderRadiusTotal = totalHeight * 0.18
-    const fontSize = totalHeight * 0.38
-    const maxReached = internalValue === maxValue
-    const minReached = internalValue === minValue
-
-    const inputContainerStyle = type === 'up-down'
-        ? [styles.inputContainerUpDown, { width: totalWidth, height: totalHeight, borderColor: borderColor }, rounded ? { borderRadius: borderRadiusTotal } : {}, containerStyle]
-        : [styles.inputContainerPlusMinus, { width: totalWidth, height: totalHeight, borderColor: borderColor }, rounded ? { borderRadius: borderRadiusTotal } : {}, containerStyle]
-
-    const calculatedInputStyle = type === 'up-down'
-        ? [styles.inputUpDown, { width: inputWidth, height: totalHeight, fontSize: fontSize, color: textColor, borderRightWidth: 2, borderRightColor: borderColor }, inputStyle]
-        : [styles.inputPlusMinus, { width: inputWidth, height: totalHeight, fontSize: fontSize, color: textColor, borderRightWidth: separatorWidth, borderLeftWidth: separatorWidth, borderLeftColor: borderColor, borderRightColor: borderColor }, inputStyle]
-
-    const upDownStyle = [{ alignItems: 'center', width: totalWidth - inputWidth, backgroundColor: upDownButtonsBackgroundColor, borderRightWidth: 1, borderRightColor: borderColor }, rounded ? { borderTopRightRadius: borderRadiusTotal, borderBottomRightRadius: borderRadiusTotal } : {}]
-
-    const rightButtonStyle = [{
-        position: 'absolute',
-        zIndex: -1,
-        right: 0,
-        height: totalHeight - 2,
-        justifyContent: 'center',
-        alignItems: 'center',
-        borderWidth: 0,
-        backgroundColor: rightButtonBackgroundColor,
-        width: (totalWidth - inputWidth) / 2
-    }, rounded ? { borderTopRightRadius: borderRadiusTotal, borderBottomRightRadius: borderRadiusTotal } : {}]
-
-    const leftButtonStyle = [{
-        position: 'absolute',
-        zIndex: -1,
-        left: 0,
-        height: totalHeight - 2,
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: leftButtonBackgroundColor,
-        width: (totalWidth - inputWidth) / 2,
-        borderWidth: 0
-    }, rounded ? { borderTopLeftRadius: borderRadiusTotal, borderBottomLeftRadius: borderRadiusTotal } : {}]
-
-    const inputWraperStyle = {
-        alignSelf: 'center',
-        borderLeftColor: borderColor,
-        borderLeftWidth: separatorWidth,
-        borderRightWidth: separatorWidth,
-        borderRightColor: borderColor
-    }
-
-    if (type === 'up-down') {
-        return (
-            <View style={inputContainerStyle}>
-                <TextInput
-                    {...extraTextInputProps}
-                    editable={editable}
-                    returnKeyType='done'
-                    underlineColorAndroid='rgba(0,0,0,0)'
-                    keyboardType='numeric'
-                    value={stringValue}
-                    onChangeText={onChangeText}
-                    style={calculatedInputStyle}
-                    ref={inputRef}
-                    onBlur={onBlurCustom}
-                    onFocus={onFocusCustom}
-                />
-                <View style={upDownStyle}>
-                    <Button onPress={inc} style={{ flex: 1, width: '100%', alignItems: 'center' }}>
-                        <Icon name='ios-arrow-up' size={fontSize} style={[styles.icon, iconStyle, maxReached ? reachMaxIncIconStyle : {}, minReached ? reachMinIncIconStyle : {}]} />
-                    </Button>
-                    <Button onPress={dec} style={{ flex: 1, width: '100%', alignItems: 'center' }}>
-                        <Icon name='ios-arrow-down' size={fontSize} style={[styles.icon, iconStyle, maxReached ? reachMaxDecIconStyle : {}, minReached ? reachMinDecIconStyle : {}]} />
-                    </Button>
-                </View>
-            </View>
-        )
+  const handleIncrement = () => {
+    const newValue = internalValue + step;
+    if (maxValue === null || newValue <= maxValue) {
+      setInternalValue(newValue);
+      setStringValue(newValue.toString());
+      onChange?.(newValue);
     } else {
-        return (
-            <View style={inputContainerStyle}>
-                <Button onPress={dec} style={leftButtonStyle}>
-                    <Icon name='remove' size={fontSize} style={[styles.icon, iconStyle, maxReached ? reachMaxDecIconStyle : {}, minReached ? reachMinDecIconStyle : {}]} />
-                </Button>
-                <View style={inputWraperStyle}>
-                    <TextInput
-                        {...extraTextInputProps}
-                        editable={editable}
-                        returnKeyType='done'
-                        underlineColorAndroid='rgba(0,0,0,0)'
-                        keyboardType='numeric'
-                        value={stringValue}
-                        onChangeText={onChangeText}
-                        style={calculatedInputStyle}
-                        ref={inputRef}
-                        onBlur={onBlurCustom}
-                        onFocus={onFocusCustom}
-                    />
-                </View>
-                <Button onPress={inc} style={rightButtonStyle}>
-                    <Icon name='add' size={fontSize} style={[styles.icon, iconStyle, maxReached ? reachMaxIncIconStyle : {}, minReached ? reachMinIncIconStyle : {}]} />
-                </Button>
-            </View>
-        )
+      onLimitReached(true, 'Reached Maximum Value!');
     }
-}
+  };
+
+  const handleDecrement = () => {
+    const newValue = internalValue - step;
+    if (minValue === null || newValue >= minValue) {
+      setInternalValue(newValue);
+      setStringValue(newValue.toString());
+      onChange?.(newValue);
+    } else {
+      onLimitReached(false, 'Reached Minimum Value!');
+    }
+  };
+
+  const handleChangeText = (text) => {
+    const numericValue = parseInt(text, 10);
+    if (!isNaN(numericValue)) {
+      if (
+        (maxValue === null || numericValue <= maxValue) &&
+        (minValue === null || numericValue >= minValue)
+      ) {
+        setInternalValue(numericValue);
+        setStringValue(text);
+        onChange?.(numericValue);
+      }
+    } else if (text === '') {
+      setStringValue('');
+    }
+  };
+
+  const handleBlur = () => {
+    if (stringValue === '') {
+      const defaultValue = minValue !== null ? minValue : 0;
+      setInternalValue(defaultValue);
+      setStringValue(defaultValue.toString());
+      onChange?.(defaultValue);
+    }
+  };
+
+  const renderPlusMinusType = () => (
+    <View style={[styles.containerPlusMinus, { width: totalWidth }, containerStyle]}>
+      <Pressable
+        onPress={handleDecrement}
+        style={({ pressed }) => [
+          styles.button,
+          { width: buttonWidth, borderTopLeftRadius: 10, borderBottomLeftRadius: 10 },
+          pressed && styles.buttonPressed
+        ]}
+      >
+        <Text style={styles.buttonText}>-</Text>
+      </Pressable>
+      <TextInput
+        editable={editable}
+        keyboardType="numeric"
+        onBlur={handleBlur}
+        onChangeText={handleChangeText}
+        returnKeyType="done"
+        style={[
+          styles.input,
+          {
+            width: inputWidth,
+            color: textColor,
+            borderColor: borderColor,
+          },
+          inputStyle,
+        ]}
+        value={stringValue}
+      />
+      <Pressable
+        onPress={handleIncrement}
+        style={({ pressed }) => [
+          styles.button,
+          { width: buttonWidth, borderTopRightRadius: 10, borderBottomRightRadius: 10 },
+          pressed && styles.buttonPressed
+        ]}
+      >
+        <Text style={styles.buttonText}>+</Text>
+      </Pressable>
+    </View>
+  );
+
+  const renderUpDownType = () => (
+    <View style={[styles.containerUpDown, { width: totalWidth }, containerStyle]}>
+      <TextInput
+        editable={editable}
+        keyboardType="numeric"
+        onBlur={handleBlur}
+        onChangeText={handleChangeText}
+        returnKeyType="done"
+        style={[
+          styles.input,
+          {
+            width: totalWidth * 0.7,
+            color: textColor,
+            borderColor: borderColor,
+          },
+          inputStyle,
+        ]}
+        value={stringValue}
+      />
+      <View style={styles.upDownButtons}>
+        <Pressable
+          onPress={handleIncrement}
+          style={({ pressed }) => [
+            styles.upDownButton,
+            { borderBottomWidth: 0.5 },
+            pressed && styles.buttonPressed
+          ]}
+        >
+          <Text style={styles.buttonText}>▲</Text>
+        </Pressable>
+        <Pressable
+          onPress={handleDecrement}
+          style={({ pressed }) => [
+            styles.upDownButton,
+            { borderTopWidth: 0.5 },
+            pressed && styles.buttonPressed
+          ]}
+        >
+          <Text style={styles.buttonText}>▼</Text>
+        </Pressable>
+      </View>
+    </View>
+  );
+
+  return type === 'plus-minus' ? renderPlusMinusType() : renderUpDownType();
+};
 
 const styles = StyleSheet.create({
-    icon: {
-        fontWeight: '900',
-        backgroundColor: 'rgba(0,0,0,0)'
-    },
-    inputContainerUpDown: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        borderColor: 'grey',
-        borderWidth: 1
-    },
-    inputContainerPlusMinus: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        borderWidth: 1
-    },
-    inputUpDown: {
-        textAlign: 'center',
-        padding: 0
-    },
-    inputPlusMinus: {
-        textAlign: 'center',
-        padding: 0
-    },
-    seprator: {
-        backgroundColor: 'grey',
-        height: calcSize(80),
-    },
-    upDown: {
-        alignItems: 'center',
-        paddingRight: calcSize(15)
-    }
-})
+  button: {
+    alignItems: 'center',
+    backgroundColor: '#09447A',
+    height: '100%',
+    justifyContent: 'center',
+  },
+  buttonPressed: {
+    opacity: 0.7,
+  },
+  buttonText: {
+    color: '#FFF',
+    fontFamily: "MBold",
+    fontSize: 18,
+  },
+  containerPlusMinus: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    height: 50,
+    justifyContent: 'space-between',
+  },
+  containerUpDown: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    height: 50,
+  },
+  input: {
+    borderColor: '#E5E7E9',
+    borderWidth: 1,
+    fontFamily: "MRegular",
+    fontSize: 16,
+    height: '100%',
+    textAlign: 'center',
+  },
+  upDownButton: {
+    alignItems: 'center',
+    backgroundColor: '#F7CB41',
+    borderColor: '#E5E7E9',
+    flex: 1,
+    justifyContent: 'center',
+    width: '100%',
+  },
+  upDownButtons: {
+    borderColor: '#E5E7E9',
+    borderWidth: 1,
+    flex: 1,
+    height: '100%',
+  },
+});
 
-export default NumericInput
+export default NumericInput;
